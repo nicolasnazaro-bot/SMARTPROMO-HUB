@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>SmartPromo Hub — Tu catálogo</title>
+  <meta name="description" content="SmartPromo Hub: catálogo de afiliados. Categorías, descripciones automáticas y posts listos para compartir." />
+  <style>
+    :root{--bg:#071025;--card:#07162a;--muted:#94a3b8;--accent:#06b6d4;--glass:rgba(255,255,255,0.03)}
+    html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial;background:linear-gradient(180deg,#071025 0%, #071733 100%);color:#e6eef8}
+    .wrap{max-width:1100px;margin:18px auto;padding:18px}
+    h1{margin:0 0 6px;font-size:22px}
+    .grid{display:grid;grid-template-columns:1fr 420px;gap:18px}
+    .card{background:var(--card);padding:14px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.6)}
+    .tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+    .tab{padding:8px 12px;border-radius:8px;background:rgba(255,255,255,0.02);cursor:pointer}
+    .tab.active{background:linear-gradient(90deg,#062b34,#044b57)}
+    .product{display:flex;gap:12px;align-items:center;padding:10px;border-radius:8px;background:rgba(255,255,255,0.02);margin-bottom:8px}
+    .thumb{width:84px;height:84px;border-radius:8px;background:#071733;display:flex;align-items:center;justify-content:center;overflow:hidden}
+    .thumb img{width:100%;height:100%;object-fit:cover}
+    .meta{flex:1}
+    .actions{display:flex;gap:6px}
+    .small{font-size:13px;color:var(--muted)}
+    button{background:var(--accent);border:0;color:#07202a;padding:8px 12px;border-radius:8px;cursor:pointer}
+    .posts{display:flex;flex-direction:column;gap:8px}
+    .post{padding:10px;border-radius:8px;background:rgba(255,255,255,0.02)}
+    footer{margin-top:18px;text-align:center;color:var(--muted);font-size:13px}
+    @media(max-width:980px){.grid{grid-template-columns:1fr} .thumb{width:64px;height:64px}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>SmartPromo Hub</h1>
+    <div class="small">Categorías: Salud y fitness • IA y productividad • Belleza • Marketing • Idiomas</div>
+    <div style="margin-top:12px" class="grid">
+      <div class="card">
+        <h3>Productos</h3>
+        <div class="tabs" id="categoryTabs"></div>
+        <div id="productsList" style="max-height:520px;overflow:auto;margin-top:8px"></div>
+      </div>
+
+      <div class="card">
+        <h3>Generador de posts</h3>
+        <div class="small">Seleccioná un producto y genera posts listos para publicar.</div>
+        <label style="display:block;margin-top:8px">Posts a generar</label>
+        <input id="numPosts" type="number" value="6" min="1" max="20" style="width:100%;padding:8px;border-radius:8px;background:var(--glass);border:1px solid rgba(255,255,255,0.04);color:inherit" />
+        <label style="display:block;margin-top:8px">Producto seleccionado</label>
+        <select id="selectedProduct" style="width:100%;padding:8px;border-radius:8px;background:var(--glass);border:1px solid rgba(255,255,255,0.04);color:inherit"><option value="">— Ninguno —</option></select>
+        <div style="margin-top:10px;display:flex;gap:8px">
+          <button id="genPosts">Generar posts</button>
+          <button id="exportAll">Exportar CSV + imágenes</button>
+        </div>
+        <hr style="margin:10px 0;border:none;border-top:1px solid rgba(255,255,255,0.03)" />
+        <h4>Posts</h4>
+        <div id="posts" class="posts"></div>
+      </div>
+    </div>
+
+    <footer>© 2025 SmartPromo Hub — Proyecto oficial de Nicolás Nazar</footer>
+  </div>
+
+<script>
+// Productos (cargados desde el CSV proporcionado por el usuario)
+const products = [
+  {"category":"Salud y fitness","name":"Desafío 21 Días Fit","desc":"Programa online de ejercicios y nutrición casera para transformar tu cuerpo desde casa.","img":"https://images.unsplash.com/photo-1558611848-73f7eb4001a1","link":"https://go.hotmart.com/XXXXX","platform":"Hotmart"},
+  {"category":"Salud y fitness","name":"Método Keto Inteligente","desc":"Guía paso a paso para bajar grasa y aumentar energía con alimentación cetogénica.","img":"https://images.unsplash.com/photo-1504674900247-0877df9cc836","link":"https://go.hotmart.com/YYYYY","platform":"Hotmart"},
+  {"category":"IA y productividad","name":"Curso Dominando ChatGPT","desc":"Aprende a usar IA para generar ingresos y automatizar tareas.","img":"https://images.unsplash.com/photo-1682685795463-9a4b59e227c1","link":"https://go.hotmart.com/ZZZZZ","platform":"Hotmart"},
+  {"category":"IA y productividad","name":"Toolkit de Automatización IA","desc":"Plantillas y herramientas de productividad impulsadas por inteligencia artificial.","img":"https://images.unsplash.com/photo-1581090700227-1e37b190418e","link":"https://www.digistore24.com/redir/12345","platform":"Digistore24"},
+  {"category":"Belleza","name":"Guía Facial Natural","desc":"Descubrí rutinas naturales para una piel más radiante sin químicos.","img":"https://images.unsplash.com/photo-1588514727390-0e7ba7d00f66","link":"https://go.hotmart.com/AAAAA","platform":"Hotmart"},
+  {"category":"Belleza","name":"Técnicas de Maquillaje Profesional","desc":"Aprendé a maquillar profesionalmente desde casa paso a paso.","img":"https://images.unsplash.com/photo-1600181952037-3c10d3a8a2a4","link":"https://go.hotmart.com/BBBBB","platform":"Hotmart"},
+  {"category":"Marketing","name":"Curso de Marketing Automático 360°","desc":"Aprendé estrategias digitales que venden por vos 24/7 sin experiencia previa.","img":"https://images.unsplash.com/photo-1557804506-669a67965ba0","link":"https://go.hotmart.com/CCCCC","platform":"Hotmart"},
+  {"category":"Marketing","name":"Herramienta de Email Marketing AI","desc":"Software automatizado que capta clientes y envía correos automáticamente.","img":"https://www.digistore24.com/redir/98765","link":"https://www.digistore24.com/redir/98765","platform":"Digistore24"},
+  {"category":"Idiomas","name":"Método Express de Inglés","desc":"Aprendé inglés rápido con técnicas de memoria comprobadas.","img":"https://images.unsplash.com/photo-1529070538774-1843cb3265df","link":"https://go.hotmart.com/DDDDD","platform":"Hotmart"},
+  {"category":"Idiomas","name":"Masterclass de Portugués Rápido","desc":"Curso práctico y comunicativo para aprender portugués desde cero.","img":"https://images.unsplash.com/photo-1616627981174-e0f4d1a96d5a","link":"https://go.hotmart.com/EEEEE","platform":"Hotmart"}
+];
+
+let categories = [];
+let currentCategory = 'Todos';
+
+function init(){
+  categories = Array.from(new Set(products.map(p=>p.category))).sort();
+  categories.unshift('Todos');
+  renderTabs();
+  renderProducts();
+  populateSelect();
+}
+
+function renderTabs(){
+  const el = document.getElementById('categoryTabs'); el.innerHTML='';
+  categories.forEach(cat=>{
+    const d = document.createElement('div'); d.className='tab'+(cat===currentCategory?' active':'');
+    d.textContent = cat; d.onclick = ()=>{ currentCategory = cat; renderTabs(); renderProducts(); };
+    el.appendChild(d);
+  });
+}
+
+function renderProducts(){
+  const el = document.getElementById('productsList'); el.innerHTML='';
+  const list = products.filter(p=> currentCategory==='Todos' || p.category===currentCategory);
+  if(!list.length) el.innerHTML='<div class="small">No hay productos en esta categoría.</div>';
+  list.forEach((p,idx)=>{
+    const div = document.createElement('div'); div.className='product';
+    div.innerHTML = `
+      <div class="thumb"><img src="${p.img}" alt="${escapeHtml(p.name)}" onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=\'http://www.w3.org/2000/svg\' width=200 height=200><rect width=100% height=100% fill=%23071233/></svg>'" /></div>
+      <div class="meta"><strong>${escapeHtml(p.name)}</strong><div class="small" style="margin-top:6px">${escapeHtml(p.desc)}</div><div class="small" style="margin-top:6px">Plataforma: ${escapeHtml(p.platform)}</div></div>
+    <div class="actions"><button onclick="selectAndFill(${idx})">Seleccionar</button><a href="${p.link}" target="_blank"><button>Ver / Comprar</button></a></div>
+    `;
+    el.appendChild(div);
+  });
+}
+
+function escapeHtml(s){ if(!s) return ''; return String(s).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;'); }
+
+function populateSelect(){ const sel = document.getElementById('selectedProduct'); sel.innerHTML = '<option value="">— Ninguno —</option>'; products.forEach((p,i)=>{ const o=document.createElement('option'); o.value=i; o.textContent = `${p.name} — ${p.category}`; sel.appendChild(o); }); }
+
+function selectAndFill(i){
+  const list = products.filter(p=> currentCategory==='Todos' || p.category===currentCategory);
+  const p = list[i]; if(!p) return;
+  const fullIndex = products.findIndex(x=> x.name===p.name && x.link===p.link);
+  document.getElementById('selectedProduct').value = fullIndex;
+  alert('Producto seleccionado: ' + p.name);
+}
+
+let generatedPosts = [];
+document.getElementById('genPosts').addEventListener('click', ()=>{
+  const idx = parseInt(document.getElementById('selectedProduct').value); if(isNaN(idx)){ alert('Seleccioná un producto primero'); return; }
+  const product = products[idx]; const n = Math.min(20, Math.max(1, parseInt(document.getElementById('numPosts').value||6)));
+  generatePosts(product, n);
+});
+
+function generatePosts(product, n){
+  const container = document.getElementById('posts'); container.innerHTML=''; generatedPosts = [];
+  for(let i=0;i<n;i++){
+    const caption = autoCaption(product, i, n);
+    const imgData = renderImage(product, caption, i);
+    const post = { caption, imgData, product }; generatedPosts.push(post);
+    const div = document.createElement('div'); div.className='post';
+    div.innerHTML = `<strong>Post ${i+1}</strong><div class="small" style="margin-top:6px">${escapeHtml(caption)}</div><div style="margin-top:8px"><img src="${imgData}" style="max-width:320px;border-radius:8px;display:block" /></div><div style="margin-top:8px;display:flex;gap:8px"><a class="download-link" href="${imgData}" download="post-${i+1}.png">Descargar imagen</a><button onclick="shareWhatsApp(${i})">Compartir WhatsApp</button><button onclick="shareTwitter(${i})">Compartir Twitter</button></div>`;
+    container.appendChild(div);
+  }
+}
+
+function autoCaption(p,i,n){
+  const templates = [
+    `¿Querés resultados rápidos? ${p.name} — ${p.desc}. Más info: ${p.link}`,
+    `🔥 Oferta: ${p.name}. ${p.desc}. Compralo aquí: ${p.link}`,
+    `Transformá tu resultado: ${p.name}. Link: ${p.link}`,
+    `Probado y recomendado: ${p.name}. Detalles: ${p.link}`,
+    `Si buscás algo que funcione: ${p.name}. Ver más: ${p.link}`
+  ];
+  return templates[i % templates.length];
+}
+
+function renderImage(product, caption, idx){
+  const c = document.createElement('canvas'); c.width = 1200; c.height = 630; const ctx = c.getContext('2d');
+  const grad = ctx.createLinearGradient(0,0,1200,630); grad.addColorStop(0,'#071733'); grad.addColorStop(1,'#052a3a'); ctx.fillStyle = grad; ctx.fillRect(0,0,1200,630);
+  ctx.fillStyle='rgba(255,255,255,0.04)'; ctx.fillRect(40,40,520,550);
+  ctx.fillStyle='#e6eef8'; ctx.font='36px sans-serif'; wrapText(ctx, product.name||'Producto',600,1200-520,36,520-40);
+  ctx.font='22px sans-serif'; ctx.fillStyle='#cfeff6'; wrapText(ctx, product.desc||'',600,180,22,520-40);
+  ctx.font='20px sans-serif'; ctx.fillStyle='#fff'; ctx.fillText('¡Ver ahora →',600,520);
+  const img = new Image(); img.crossOrigin='anonymous'; img.src = product.img || '';
+  if(img.src){
+    img.onload = ()=>{
+      try{
+        ctx.drawImage(img,40,40,520,550);
+        ctx.fillStyle='rgba(0,0,0,0.28)'; ctx.fillRect(40,440,520,150);
+        ctx.font='28px sans-serif'; ctx.fillStyle='#fff'; wrapText(ctx, product.name||'',60,470,28,480);
+        const data = c.toDataURL('image/png');
+        generatedPosts.forEach(g=>{ if(g.product && g.product.link===product.link) g.imgData = data });
+        const imgs = document.querySelectorAll('#posts img'); imgs.forEach((el,i)=>{ if(el && el.src && el.src.startsWith('data:')) el.src = generatedPosts[i].imgData });
+      }catch(e){console.warn(e)}
+    }
+  }
+  return c.toDataURL('image/png');
+}
+
+function wrapText(ctx, text, x, y, lineHeight, maxWidth){ const words = text.split(' '); let line=''; for(let n=0;n<words.length;n++){ const testLine = line + words[n] + ' '; const metrics = ctx.measureText(testLine); const testWidth = metrics.width; if(testWidth > maxWidth && n>0){ ctx.fillText(line, x, y); line = words[n] + ' '; y += lineHeight; }else{ line = testLine; }} ctx.fillText(line, x, y); }
+
+function shareWhatsApp(i){ const p = generatedPosts[i]; if(!p) return; const text = encodeURIComponent(p.caption); window.open('https://wa.me/?text='+text,'_blank'); }
+function shareTwitter(i){ const p = generatedPosts[i]; if(!p) return; const text = encodeURIComponent(p.caption); window.open('https://twitter.com/intent/tweet?text='+text,'_blank'); }
+
+// Initialize
+init();
+</script>
+</body>
+</html>
